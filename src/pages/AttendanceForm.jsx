@@ -20,7 +20,7 @@ const AttendanceForm = () => {
 
   const session = sessionId ? attendanceStore.getSession(sessionId) : null;
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

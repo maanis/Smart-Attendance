@@ -1,42 +1,13 @@
-interface Session {
-  id: string;
-  subject: string;
-  course: string;
-  year: string;
-  division: string;
-  radius: number;
-  duration: number;
-  teacherName: string;
-  status: 'open' | 'closed';
-  createdAt: Date;
-  attendees: Array<{
-    rollNo: string;
-    name: string;
-    time: string;
-    status: 'present' | 'absent';
-  }>;
-}
-
-interface AttendanceStore {
-  sessions: Record<string, Session>;
-  currentSession: string | null;
-  currentStudentSubmission: {
-    sessionId: string;
-    rollNo: string;
-    name: string;
-    time: string;
-    status: 'success' | 'already_submitted' | 'session_closed';
-  } | null;
-}
-
 class AttendanceStoreManager {
-  private store: AttendanceStore = {
-    sessions: {},
-    currentSession: null,
-    currentStudentSubmission: null,
-  };
+  constructor() {
+    this.store = {
+      sessions: {},
+      currentSession: null,
+      currentStudentSubmission: null,
+    };
+  }
 
-  createSession(sessionData: Omit<Session, 'id' | 'status' | 'createdAt' | 'attendees'>): string {
+  createSession(sessionData) {
     const id = Math.random().toString(36).substr(2, 9).toUpperCase();
     this.store.sessions[id] = {
       ...sessionData,
@@ -49,11 +20,11 @@ class AttendanceStoreManager {
     return id;
   }
 
-  getSession(id: string): Session | null {
+  getSession(id) {
     return this.store.sessions[id] || null;
   }
 
-  closeSession(id: string): boolean {
+  closeSession(id) {
     if (this.store.sessions[id]) {
       this.store.sessions[id].status = 'closed';
       return true;
@@ -61,7 +32,7 @@ class AttendanceStoreManager {
     return false;
   }
 
-  markAttendance(sessionId: string, rollNo: string, name: string): 'success' | 'already_submitted' | 'session_closed' {
+  markAttendance(sessionId, rollNo, name) {
     const session = this.store.sessions[sessionId];
     
     if (!session) {
@@ -105,7 +76,7 @@ class AttendanceStoreManager {
     return 'success';
   }
 
-  getCurrentSession(): Session | null {
+  getCurrentSession() {
     return this.store.currentSession ? this.store.sessions[this.store.currentSession] : null;
   }
 

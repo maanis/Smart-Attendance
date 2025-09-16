@@ -24,7 +24,7 @@ const TeacherDashboard = () => {
 
   const currentSession = attendanceStore.getCurrentSession();
 
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
