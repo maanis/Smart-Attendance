@@ -16,10 +16,10 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 const createSession = async (req, res) => {
     try {
-        const { latitude, longitude, radius } = req.body;
+        const { latitude, longitude, radius, subject, course, year, division, room, duration } = req.body;
 
-        if (!latitude || !longitude) {
-            return res.status(400).json({ error: 'Latitude and longitude are required' });
+        if (!latitude || !longitude || !subject || !course || !year || !division) {
+            return res.status(400).json({ error: 'All required fields are required' });
         }
 
         // Generate 6-digit random sessionId
@@ -28,6 +28,12 @@ const createSession = async (req, res) => {
         const session = new Session({
             sessionId,
             createdBy: req.user._id,
+            subject,
+            course,
+            year,
+            division,
+            room: room || "",
+            duration: duration || 60,
             location: { latitude, longitude },
             radius: radius || 50,
             isActive: true
@@ -39,6 +45,12 @@ const createSession = async (req, res) => {
             message: 'Session created successfully',
             session: {
                 sessionId: session.sessionId,
+                subject: session.subject,
+                course: session.course,
+                year: session.year,
+                division: session.division,
+                room: session.room,
+                duration: session.duration,
                 location: session.location,
                 radius: session.radius,
                 isActive: session.isActive,
@@ -102,6 +114,12 @@ const getSession = async (req, res) => {
         res.json({
             session: {
                 sessionId: session.sessionId,
+                subject: session.subject,
+                course: session.course,
+                year: session.year,
+                division: session.division,
+                room: session.room,
+                duration: session.duration,
                 createdBy: session.createdBy,
                 location: session.location,
                 radius: session.radius,
@@ -135,6 +153,17 @@ const markAttendance = async (req, res) => {
             return res.status(400).json({ error: 'Session is not active' });
         }
 
+        console.log('geoLocation:', geoLocation);
+        console.log('session location:', session.location);
+
+        console.log(
+            `Teacher: https://www.google.com/maps?q=${session.location.latitude},${session.location.longitude}`
+        );
+        console.log(
+            `Student: https://www.google.com/maps?q=${geoLocation.latitude},${geoLocation.longitude}`
+        );
+
+
         // Check location distance
         const distance = calculateDistance(
             session.location.latitude,
@@ -142,6 +171,8 @@ const markAttendance = async (req, res) => {
             geoLocation.latitude,
             geoLocation.longitude
         );
+
+        console.log('distance', distance);
 
         if (distance > session.radius) {
             return res.status(400).json({
@@ -187,4 +218,28 @@ const markAttendance = async (req, res) => {
     }
 };
 
-module.exports = { createSession, closeSession, getSession, markAttendance };
+const getActiveSessions = async (req, res) => {
+    try {
+        const sessions = await Session.find({
+            createdBy: req.user._id,
+            isActive: true
+        })
+            .select('sessionId location radius attendance createdAt')
+            .sort({ createdAt: -1 });
+
+        res.json({
+            sessions: sessions.map(session => ({
+                sessionId: session.sessionId,
+                location: session.location,
+                radius: session.radius,
+                attendanceCount: session.attendance.length,
+                createdAt: session.createdAt
+            }))
+        });
+    } catch (error) {
+        console.error('Get active sessions error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+module.exports = { createSession, closeSession, getSession, markAttendance, getActiveSessions };

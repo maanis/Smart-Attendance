@@ -5,56 +5,158 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { QrCode, Plus, ArrowLeft, Users } from "lucide-react";
+import { QrCode, Plus, ArrowLeft, Users, MapPin, Loader2, Clock, Eye } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { attendanceStore } from "@/store/attendanceStore";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import useActiveSessions from "@/hooks/useActiveSessions";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [formData, setFormData] = useState({
     subject: "",
     course: "",
     year: "",
     division: "",
+    room: "",
     radius: 50,
     duration: 60,
   });
+  const [isCreating, setIsCreating] = useState(false);
+  const [location, setLocation] = useState(null);
 
   const currentSession = attendanceStore.getCurrentSession();
+  const { data: activeSessions, isLoading: sessionsLoading, error: sessionsError } = useActiveSessions();
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const getCurrentLocation = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation is not supported by this browser"));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          reject(new Error("Unable to get location: " + error.message));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0, // 5 minutes
+        }
+      );
+    });
   };
 
-  const handleCreateSession = () => {
+  const handleCreateSession = async () => {
     if (!formData.subject || !formData.course || !formData.year || !formData.division) {
-      toast({
-        title: "Missing Information",
+      toast.error("Missing Information", {
         description: "Please fill in all required fields.",
-        variant: "destructive",
       });
       return;
     }
 
-    const sessionId = attendanceStore.createSession({
-      ...formData,
-      teacherName: "Dr. Smith", // Mock teacher name
-    });
+    setIsCreating(true);
 
-    toast({
-      title: "Session Created",
-      description: `Room ID: ${sessionId}`,
-    });
+    try {
+      // Get current location
+      const currentLocation = await getCurrentLocation();
 
-    navigate(`/teacher/session/${sessionId}`);
+      // Make API call to create session
+      const response = await fetch("http://localhost:5000/api/sessions/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Include cookies for authentication
+        body: JSON.stringify({
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          radius: formData.radius,
+          subject: formData.subject,
+          course: formData.course,
+          year: formData.year,
+          division: formData.division,
+          room: formData.room || "",
+          duration: formData.duration,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create session");
+      }
+
+      const data = await response.json();
+
+      toast.success("Session Created", {
+        description: `Room ID: ${data.session.sessionId}`,
+      });
+
+      // Store session in local store for UI purposes
+      attendanceStore.createSession({
+        ...formData,
+        id: data.session.sessionId,
+        location: currentLocation,
+        teacherName: "Teacher", // This should come from authenticated user
+      });
+
+      navigate(`/teacher/session/${data.session.sessionId}`);
+    } catch (error) {
+      console.error("Create session error:", error);
+      toast.error("Error", {
+        description: error.message,
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleCloseSession = () => {
     if (currentSession) {
       attendanceStore.closeSession(currentSession.id);
       navigate(`/teacher/attendance/${currentSession.id}`);
+    }
+  };
+
+  const handleCloseSessionFromList = async (sessionId) => {
+    try {
+      const response = await fetch("http://localhost:5000/api/sessions/close", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ sessionId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to close session");
+      }
+
+      toast.success("Session Closed", {
+        description: `Session ${sessionId} has been closed successfully.`,
+      });
+
+      // Refetch active sessions to update the list
+      // Note: This would require invalidating the query cache
+      // For now, we'll just show a success message
+    } catch (error) {
+      console.error("Close session error:", error);
+      toast.error("Error", {
+        description: error.message,
+      });
     }
   };
 
@@ -161,6 +263,16 @@ const TeacherDashboard = () => {
                       </div>
 
                       <div>
+                        <Label htmlFor="room">Room (Optional)</Label>
+                        <Input
+                          id="room"
+                          placeholder="e.g., Room 101"
+                          value={formData.room}
+                          onChange={(e) => handleInputChange("room", e.target.value)}
+                        />
+                      </div>
+
+                      <div>
                         <Label htmlFor="radius">Radius (meters)</Label>
                         <Input
                           id="radius"
@@ -182,9 +294,100 @@ const TeacherDashboard = () => {
                     </div>
                   </div>
 
-                  <Button onClick={handleCreateSession} className="w-full" size="lg">
-                    Create Session
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
+                    <MapPin className="h-4 w-4" />
+                    <span>Your current location will be used for session geofencing</span>
+                  </div>
+
+                  <Button onClick={handleCreateSession} className="w-full" size="lg" disabled={isCreating}>
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creating Session...
+                      </>
+                    ) : (
+                      "Create Session"
+                    )}
                   </Button>
+                </CardContent>
+              </Card>
+
+              {/* Active Sessions Section */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Clock className="h-5 w-5" />
+                    <span>Active Sessions</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Your currently running attendance sessions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {sessionsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      <span>Loading active sessions...</span>
+                    </div>
+                  ) : sessionsError ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Failed to load active sessions</p>
+                      <p className="text-sm">{sessionsError.message}</p>
+                    </div>
+                  ) : activeSessions && activeSessions.length > 0 ? (
+                    <div className="space-y-4">
+                      {activeSessions.map((session) => (
+                        <div key={session.sessionId} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3">
+                                <div className="text-lg font-mono font-bold text-primary">
+                                  {session.sessionId}
+                                </div>
+                                <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                                  <MapPin className="h-4 w-4" />
+                                  <span>{session.radius}m radius</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
+                                <div className="flex items-center space-x-1">
+                                  <Users className="h-4 w-4" />
+                                  <span>{session.attendanceCount} attendees</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <Clock className="h-4 w-4" />
+                                  <span>Created {new Date(session.createdAt).toLocaleTimeString()}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate(`/teacher/session/${session.sessionId}`)}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleCloseSessionFromList(session.sessionId)}
+                              >
+                                Close
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium">No Active Sessions</p>
+                      <p className="text-sm">Create a new session to get started</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -207,7 +410,7 @@ const TeacherDashboard = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="text-sm text-muted-foreground">
                       <p><strong>Room ID:</strong> {currentSession.id}</p>
                       <p><strong>Subject:</strong> {currentSession.subject}</p>

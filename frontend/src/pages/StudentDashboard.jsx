@@ -7,29 +7,16 @@ import { Label } from "@/components/ui/label";
 import { QrCode, Hash, ArrowLeft, GraduationCap, Camera } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { attendanceStore } from "@/store/attendanceStore";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [roomId, setRoomId] = useState("");
 
   const handleJoinSession = () => {
     if (!roomId.trim()) {
-      toast({
-        title: "Missing Room ID",
+      toast.error("Missing Room ID", {
         description: "Please enter a valid Room ID.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const session = attendanceStore.getSession(roomId.toUpperCase());
-    if (!session) {
-      toast({
-        title: "Invalid Room ID",
-        description: "Session not found. Please check the Room ID.",
-        variant: "destructive",
       });
       return;
     }
@@ -44,10 +31,8 @@ const StudentDashboard = () => {
     if (currentSession) {
       navigate(`/student/attendance/${currentSession.id}`);
     } else {
-      toast({
-        title: "No Active Session",
+      toast.error("No Active Session", {
         description: "No QR code detected. Please try again.",
-        variant: "destructive",
       });
     }
   };
@@ -69,6 +54,9 @@ const StudentDashboard = () => {
                 <GraduationCap className="h-6 w-6 text-accent" />
                 <h1 className="text-xl font-semibold">Student Dashboard</h1>
               </div>
+            </div>
+            <div>
+              <Button onClick={() => navigate('/teacher/login')}>Teacher</Button>
             </div>
           </div>
         </div>

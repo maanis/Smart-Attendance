@@ -6,6 +6,7 @@ import Index from "./pages/Index";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
+import TeacherLogin from "./pages/TeacherLogin";
 import ActiveSession from "./pages/ActiveSession";
 import AttendanceList from "./pages/AttendanceList";
 import AttendanceForm from "./pages/AttendanceForm";
@@ -21,9 +22,10 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/teacher" element={<TeacherDashboard />} />
-          <Route path="/student" element={<StudentDashboard />} />
+          <Route path="/" element={<StudentDashboard />} />
+          <Route path="/teacher/login" element={<TeacherLogin />} />
+          <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+          {/* <Route path="/student" element={<StudentDashboard />} /> */}
           <Route path="/teacher/session/:sessionId" element={<ActiveSession />} />
           <Route path="/teacher/attendance/:sessionId" element={<AttendanceList />} />
           <Route path="/student/attendance/:sessionId" element={<AttendanceForm />} />

@@ -1,5 +1,5 @@
 const express = require('express');
-const { createSession, closeSession, getSession, markAttendance } = require('../controllers/sessionController');
+const { createSession, closeSession, getSession, markAttendance, getActiveSessions } = require('../controllers/sessionController');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -13,6 +13,11 @@ router.post('/create', auth, createSession);
 // @desc    Close an existing session
 // @access  Private (Session creator only)
 router.put('/close', auth, closeSession);
+
+// @route   GET /api/sessions/active
+// @desc    Get active sessions for current teacher
+// @access  Private (Teacher only)
+router.get('/active', auth, getActiveSessions);
 
 // @route   GET /api/sessions/:sessionId
 // @desc    Get session details
