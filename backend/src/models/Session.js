@@ -11,6 +11,30 @@ const sessionSchema = new mongoose.Schema({
         ref: 'Teacher',
         // required: true
     },
+    subject: {
+        type: String,
+        required: true
+    },
+    course: {
+        type: String,
+        required: true
+    },
+    year: {
+        type: String,
+        required: true
+    },
+    division: {
+        type: String,
+        required: true
+    },
+    room: {
+        type: String,
+        default: ""
+    },
+    duration: {
+        type: Number,
+        default: 60
+    },
     location: {
         latitude: {
             type: Number,
@@ -24,6 +48,14 @@ const sessionSchema = new mongoose.Schema({
     radius: {
         type: Number,
         default: 50
+    },
+    isLocationRequired: {
+        type: Boolean,
+        default: true
+    },
+    isFaceRecogRequired: {
+        type: Boolean,
+        default: false
     },
     isActive: {
         type: Boolean,

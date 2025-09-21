@@ -41,6 +41,7 @@ const register = async (req, res) => {
 
         res.status(201).json({
             message: 'Teacher registered successfully',
+            token,
             teacher: {
                 id: teacher._id,
                 name: teacher.name,
@@ -86,6 +87,7 @@ const login = async (req, res) => {
 
         res.json({
             message: 'Login successful',
+            token,
             teacher: {
                 id: teacher._id,
                 name: teacher.name,
@@ -114,4 +116,43 @@ const logout = (req, res) => {
     }
 };
 
-module.exports = { register, login, logout };
+const isAuthenticated = async (req, res) => {
+    try {
+        const authHeader = req.headers["authorization"];
+
+        if (!authHeader) {
+            return res.json({ authenticated: false });
+        }
+
+        const token = authHeader.split(" ")[1]; // "Bearer <token>"
+
+        if (!token) {
+            return res.json({ authenticated: false });
+        }
+
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            // Optional: Check if teacher still exists in database
+            const teacher = await Teacher.findById(decoded.id);
+            if (!teacher) {
+                return res.json({ authenticated: false });
+            }
+
+            res.json({
+                authenticated: true,
+                teacher: {
+                    id: teacher._id,
+                    name: teacher.name,
+                    email: teacher.email
+                }
+            });
+        } catch (error) {
+            return res.json({ authenticated: false });
+        }
+    } catch (error) {
+        console.error('Authentication check error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+module.exports = { register, login, logout, isAuthenticated };

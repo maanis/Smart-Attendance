@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GraduationCap, AlertCircle } from "lucide-react";
+import { GraduationCap, AlertCircle, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import useAuth from "@/hooks/useAuth";
+import { Link, useNavigate } from "react-router-dom";
 
 const TeacherLogin = () => {
     const [email, setEmail] = useState("");
@@ -13,6 +14,7 @@ const TeacherLogin = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
     const { login, handleLoginSuccess } = useAuth();
+    const navigate = useNavigate();
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -22,7 +24,8 @@ const TeacherLogin = () => {
         setError("");
 
         try {
-            await login({ email, password });
+            const res = await login({ email, password });
+            console.log(res)
             handleLoginSuccess();
         } catch (err) {
             setError(err.message);
@@ -31,6 +34,13 @@ const TeacherLogin = () => {
             setIsLoading(false);
         }
     };
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            navigate('/teacher/dashboard');
+        }
+    }, [navigate]);
 
     return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -75,6 +85,16 @@ const TeacherLogin = () => {
                             {isLoading ? "Logging in..." : "Login"}
                         </Button>
                     </form>
+                    <div className="text-center text-sm mt-4">
+                        {/* --- FEATURE ADDED: Back link as requested --- */}
+                        <Link
+                            to="/"
+                            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 w-full"
+                        >
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Go Back to Student View
+                        </Link>
+                    </div>
                 </CardContent>
             </Card>
         </div>

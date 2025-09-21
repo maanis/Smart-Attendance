@@ -1,150 +1,106 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { QrCode, Hash, ArrowLeft, GraduationCap, Camera } from "lucide-react";
+import { GraduationCap, LogIn, ArrowRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { attendanceStore } from "@/store/attendanceStore";
 import { toast } from "sonner";
+import { motion } from "framer-motion"; // --- UI/UX Improvement: For smooth animations
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const [roomId, setRoomId] = useState("");
 
+  // Check for token and redirect to teacher dashboard if one exists (logic is solid, no changes)
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate('/teacher/dashboard');
+    }
+  }, [navigate]);
+
   const handleJoinSession = () => {
-    if (!roomId.trim()) {
-      toast.error("Missing Room ID", {
-        description: "Please enter a valid Room ID.",
+    if (roomId.trim().length < 6) { // A bit more specific validation
+      toast.error("Invalid Room ID", {
+        description: "Please enter the complete Room ID provided by your teacher.",
       });
       return;
     }
-
-    navigate(`/student/attendance/${roomId.toUpperCase()}`);
+    navigate(`/student/attendance/${roomId.trim().toUpperCase()}`);
   };
 
-  const handleQRScan = () => {
-    // Simulate QR scan - in real app this would open camera
-    // For demo, we'll use the existing session
-    const currentSession = attendanceStore.getCurrentSession();
-    if (currentSession) {
-      navigate(`/student/attendance/${currentSession.id}`);
-    } else {
-      toast.error("No Active Session", {
-        description: "No QR code detected. Please try again.",
-      });
+  // --- UI/UX Improvement: Allow joining by pressing 'Enter' key
+  const handleKeyUp = (event) => {
+    if (event.key === 'Enter') {
+      handleJoinSession();
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link to="/">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-              </Link>
-              <div className="flex items-center space-x-2">
-                <GraduationCap className="h-6 w-6 text-accent" />
-                <h1 className="text-xl font-semibold">Student Dashboard</h1>
-              </div>
-            </div>
-            <div>
-              <Button onClick={() => navigate('/teacher/login')}>Teacher</Button>
-            </div>
-          </div>
+    // --- UI/UX Improvement: A more engaging background and layout
+    <div className="relative flex flex-col min-h-screen w-full items-center justify-center bg-background p-4 overflow-hidden">
+      {/* Subtle background grid pattern */}
+      <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#374151_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+      {/* --- UI/UX Improvement: Cleaner, more integrated header */}
+      <header className="absolute top-0 left-0 w-full p-4 md:p-6 z-10">
+        <div className="md:container md:mx-auto flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <GraduationCap className="h-6 w-6 text-primary" />
+            <span className="font-bold text-lg">Student Portal</span>
+          </Link>
+          <Button variant="outline" onClick={() => navigate('/teacher/login')}>
+            Teacher Login
+            <LogIn className="ml-2 h-4 w-4" />
+          </Button>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-2">Join Attendance Session</h2>
-            <p className="text-muted-foreground">Enter Room ID or scan QR code to mark your attendance</p>
-          </div>
-
-          <Tabs defaultValue="room-id" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="room-id" className="flex items-center space-x-2">
-                <Hash className="h-4 w-4" />
-                <span>Enter Room ID</span>
-              </TabsTrigger>
-              <TabsTrigger value="qr-scan" className="flex items-center space-x-2">
-                <QrCode className="h-4 w-4" />
-                <span>Scan QR</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="room-id">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Enter Room ID</CardTitle>
-                  <CardDescription>
-                    Get the Room ID from your teacher and enter it below
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <Label htmlFor="roomId">Room ID</Label>
-                    <Input
-                      id="roomId"
-                      placeholder="e.g., ABC123XYZ"
-                      value={roomId}
-                      onChange={(e) => setRoomId(e.target.value)}
-                      className="text-center font-mono text-lg"
-                    />
-                  </div>
-
-                  <Button onClick={handleJoinSession} className="w-full" size="lg">
-                    Join Session
-                  </Button>
-
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground text-center">
-                      💡 Room IDs are usually 9 characters long (e.g., ABC123XYZ)
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="qr-scan">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Scan QR Code</CardTitle>
-                  <CardDescription>
-                    Point your camera at the QR code displayed by your teacher
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-center space-y-6">
-                  <div className="bg-muted/50 p-8 rounded-lg">
-                    <Camera className="h-24 w-24 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-lg font-medium mb-2">QR Scanner</p>
-                    <p className="text-sm text-muted-foreground">Click below to simulate scanning</p>
-                  </div>
-
-                  <Button onClick={handleQRScan} className="w-full" size="lg">
-                    <QrCode className="h-5 w-5 mr-2" />
-                    Scan QR Code
-                  </Button>
-
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground text-center">
-                      📱 In a real app, this would open your camera to scan QR codes
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+      {/* --- UI/UX Improvement: Animated, focused main content area instead of a basic card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative z-10 flex w-full max-w-md flex-col items-center space-y-8 rounded-xl border bg-background/80 p-8 text-center shadow-lg backdrop-blur-sm"
+      >
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight">Join Your Session</h1>
+          <p className="text-muted-foreground">Enter the 6-Digit code from your teacher.</p>
         </div>
-      </main>
+
+        <div className="w-full space-y-4">
+          {/* --- UI/UX Improvement: A much larger, more prominent input field */}
+          <Input
+            id="roomId"
+            type="number"
+            placeholder="******"
+            value={roomId}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Only allow up to 6 digits
+              if (value.length <= 6) {
+                setRoomId(value);
+              }
+            }}
+            onKeyUp={handleKeyUp}
+            className="h-10 w-full text-center md:text-xl font-mono uppercase tracking-[0.3em] placeholder:tracking-normal"
+            maxLength={6}
+          />
+
+          <Button onClick={handleJoinSession} className="w-full" size="lg">
+            Join Session
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+
+        <p className="text-xs text-muted-foreground px-4">
+          💡 Make sure you allow location and camera access when prompted for attendance.
+        </p>
+      </motion.div>
+
+      {/* --- UI/UX Improvement: Simple footer */}
+      <footer className="absolute bottom-4 text-center text-xs text-muted-foreground z-10">
+        Attendance System | Designed for Modern Classrooms
+      </footer>
     </div>
   );
 };

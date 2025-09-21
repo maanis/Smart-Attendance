@@ -26,7 +26,7 @@ const AttendanceConfirmation = () => {
             <p>You can now close this page or return to the dashboard.</p>
           </div>
 
-          <Link to="/student" className="block">
+          <Link to="/" className="block">
             <Button className="w-full">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Dashboard

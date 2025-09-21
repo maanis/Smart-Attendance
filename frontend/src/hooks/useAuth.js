@@ -1,27 +1,15 @@
 import { useNavigate } from "react-router-dom";
-
-const API_BASE_URL = "http://localhost:5000/api";
+import axiosInstance from "@/utils/axiosInstance";
 
 const useAuth = () => {
     const navigate = useNavigate();
 
     const login = async ({ email, password }) => {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            credentials: "include", // Include cookies for httpOnly token
-            body: JSON.stringify({ email, password }),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "Login failed");
+        const response = await axiosInstance.post("/auth/login", { email, password });
+        if (response.data.token) {
+            localStorage.setItem("token", response.data.token);
         }
-
-        const data = await response.json();
-        return data;
+        return response.data;
     };
 
     const handleLoginSuccess = () => {

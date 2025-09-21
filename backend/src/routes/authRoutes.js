@@ -1,5 +1,5 @@
 const express = require('express');
-const { register, login, logout } = require('../controllers/authController');
+const { register, login, logout, isAuthenticated } = require('../controllers/authController');
 
 const router = express.Router();
 
@@ -17,5 +17,10 @@ router.post('/login', login);
 // @desc    Logout teacher
 // @access  Private
 router.post('/logout', logout);
+
+// @route   GET /api/auth/isAuthenticated
+// @desc    Check if user is authenticated
+// @access  Public
+router.get('/isAuthenticated', isAuthenticated);
 
 module.exports = router;

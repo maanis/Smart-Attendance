@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-
-const API_BASE_URL = "http://localhost:5000/api";
+import axiosInstance from "@/utils/axiosInstance";
 
 const useSession = (sessionId) => {
     return useQuery({
@@ -8,22 +7,29 @@ const useSession = (sessionId) => {
         queryFn: async () => {
             if (!sessionId) throw new Error("Session ID is required");
 
-            const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
-                method: "GET",
-                credentials: "include", // Include cookies for authentication
+            const response = await axiosInstance.get(`/sessions/${sessionId}`, {
+                headers: {
+                    Accept: "application/json", // enforce JSON
+                },
+                validateStatus: () => true, // let us handle HTML / error manually
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || "Failed to fetch session");
+            // Check if response is JSON
+            if (
+                response.headers["content-type"]?.includes("application/json") ||
+                typeof response.data === "object"
+            ) {
+                console.log(response.data);
+                return response.data?.session || response.data?.error || null;
+            } else {
+                // fallback: ngrok free HTML error page
+                console.warn("Received HTML instead of JSON from ngrok", response.data);
+                throw new Error("Invalid response from API (ngrok may be returning HTML)");
             }
-
-            const data = await response.json();
-            return data.session;
         },
-        enabled: !!sessionId, // Only run query if sessionId exists
+        enabled: !!sessionId,
         retry: 1,
-        refetchInterval: 30000, // Refetch every 30 seconds to get updated attendance
+        refetchInterval: 30000,
     });
 };
 
