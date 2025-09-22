@@ -1,4 +1,4 @@
-# Room Checkr - Smart Attendance Management System
+# Smart Attendance Management System
 
 A comprehensive digital attendance tracking system built with modern web technologies, featuring face recognition, location verification, and real-time session management for educational institutions.
 
